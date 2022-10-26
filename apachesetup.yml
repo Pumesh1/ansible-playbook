@@ -1,0 +1,55 @@
+---
+
+- name: This sets up an httpd webserver
+  hosts: webservers
+  tasks:
+  - name: Install apache and firewalld packages
+    yum:
+      name:
+      - httpd
+      - firewalld
+      - wget
+      - unzip 
+      state: latest
+  - name: Ensure the default Apache port is 8080
+    lineinfile:
+      path: /etc/httpd/conf/httpd.conf
+      regexp: '^Listen '
+      insertafter: '^#Listen '
+      line: Listen 8080
+  - name: Ensure httpd is running and enabled
+    service:
+      name: httpd
+      state: started
+      enabled: yes
+  - name: Put SELinux in permissive mode, logging actions that would be blocked.
+    selinux:
+      policy: targeted
+      state: permissive
+  - name: Ensure firewalld service is running 
+    service:
+      name: firewalld
+      state: started
+  - name: Adding firewall rule port 8080
+    firewalld:
+      port: 8080/tcp
+      permanent: yes
+      state: enabled
+      immediate: yes
+  - name: Clean the webroot
+    shell: /bin/rm -rf /var/www/html/*
+  - name: Download the web content
+    get_url:
+      url: https://www.free-css.com/assets/files/free-css-templates/download/page284/mical.zip
+      dest: /var/www/html
+  - name: Extract the downloaded zip file
+    unarchive:
+      src: /var/www/html/mical.zip
+      dest: /var/www/html
+      remote_src: yes
+  - name: Delete the mical.zip file
+    command:
+      cmd: rm -f /var/www/html/mical.zip
+  - name: Move the website files to webroot
+    shell:
+      cmd: mv /var/www/html/mical-html/* /var/www/html
